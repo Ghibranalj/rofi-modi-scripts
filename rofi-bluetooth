@@ -1,0 +1,87 @@
+#! /usr/bin/env bash
+
+divider="=================================================="
+exit="Exit"
+
+function echoinfo() {
+    echo -e "$1\0info\x1f$2"
+}
+
+function is_discoverable() {
+    if bluetoothctl show | grep -iq "Discoverable: yes"; then
+        echo "Discoverable: yes"
+        return 0
+    fi
+
+    echo "Discoverable: no"
+    return 1
+}
+discoverable=$(is_discoverable)
+
+function is_powered() {
+    if bluetoothctl show | grep -iq "Powered: yes"; then
+        echo "Powered: yes"
+        return 0
+    fi
+
+    echo "Powered: no"
+    return 1
+}
+powered=$(is_powered)
+
+function is_scanning() {
+    if bluetoothctl show | grep -iq "Discovering: yes"; then
+        echo "Scanning: yes"
+        return 0
+    fi
+
+    echo "Scanning: no"
+    return 1
+}
+scanning=$(is_scanning)
+
+function print_devices() {
+    bluetoothctl devices | awk '{print $3}'
+}
+
+function print_menu() {
+    print_devices
+    echo $divider
+    echo $powered
+    echo $discoverable
+    echo $scanning
+
+    echo $exit
+}
+
+function print_device() {
+    echo $1
+}
+
+function main() {
+    # echo $@ test
+    SEL="$*"
+    RET=$ROFI_RETV
+    state=$ROFI_INFO
+
+    echo -en "\0prompt\x1fBluetooth\n"
+
+    # echo $state
+    if [[ "$state" == "" ]]; then
+        case "$SEL" in
+            "")
+                print_menu
+                ;;
+            "$exit")
+                exit 0
+                ;;
+            *)
+                print_device $SEL
+                ;;
+        esac
+    elif [[ "$state" == "device" ]]; then
+        print_device $SEL
+    fi
+}
+
+main $@
