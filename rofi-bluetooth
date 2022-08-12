@@ -64,19 +64,6 @@ function print_devices() {
     done <<<"$devices"
 }
 
-function menu_state() {
-    print_devices
-
-    echo $divider
-    echo "$refresh"
-    echo $powered
-    echo $discoverable
-    echo $scanning
-    echo $pairable
-    echo $exit
-}
-
-
 function is_paired() {
     if bluetoothctl info "$1" | grep -iq "Paired: yes"; then
         echo "Paired: Yes"
@@ -128,51 +115,103 @@ function toggle_trust() {
 }
 
 function device_state() {
-    device=$state
+    device=$(echo $state | cut -d ';' -f1)
+    action=$(echo $state | cut -d ';' -f2)
     mac=$(bluetoothctl devices | grep "$device" | awk '{print $2}')
+
+    case $action in
+        "pair")
+            toggle_pair "$mac"
+            ;;
+        "connect")
+            toggle_connect "$mac"
+            ;;
+        "trust")
+            toggle_trust "$mac"
+            ;;
+    esac
+
     echo -en "\0prompt\x1f$device\n"
 
-    paired=$(is_paired "$mac")
     connected=$(is_connected "$mac")
+    paired=$(is_paired "$mac")
     trusted=$(is_trusted "$mac")
 
-    echoinfo "$connected" "$device"
-    echoinfo "$paired" $device
-    echoinfo "$trusted" $device
+    echoinfo "$connected" "$device;connect"
+    echoinfo "$paired" "$device;pair"
+    echoinfo "$trusted" "$device;trust"
 
     echoinfo $divider $device
     echoinfo "$refresh" $device
 
     echo $back
     echo $exit
-
-    case $SEL in
-        "$device" | $divider | $refresh)
-            return 0
-            ;;
-        "$paired")
-            toggle_pair "$mac"
-            return 0
-            ;;
-        "$connected")
-            toggle_connect "$mac"
-            return 0
-            ;;
-        "$trusted")
-            toggle_trust "$mac"
-            return 0
-            ;;
-    esac
 }
 
-toggle_scan() {
-    if is_scanning >> /dev/null; then
+function toggle_scan() {
+    if is_scanning >>/dev/null; then
         kill $(pgrep -f "bluetoothctl scan on")
-        bluetoothctl scan off >> /dev/null
+        bluetoothctl scan off >>/dev/null
     else
-        bluetoothctl scan on >> /dev/null &
+        bluetoothctl scan on >>/dev/null &
     fi
 }
+
+function toggle_discoverable() {
+    if is_discoverable >>/dev/null; then
+        bluetoothctl discoverable off >>/dev/null
+    else
+        bluetoothctl discoverable on >>/dev/null
+    fi
+}
+
+function toggle_powered() {
+    if is_powered >>/dev/null; then
+        bluetoothctl power off >>/dev/null
+    else
+        bluetoothctl power on >>/dev/null
+    fi
+}
+
+function toggle_pairable() {
+    if is_pairable >>/dev/null; then
+        bluetoothctl pairable off >>/dev/null
+    else
+        bluetoothctl pairable on >>/dev/null
+    fi
+}
+
+function menu_state() {
+
+    case "$SEL" in
+        "$exit")
+            exit 0
+            ;;
+        "$scanning")
+            toggle_scan
+            ;;
+        "$discoverable")
+            toggle_discoverable
+            ;;
+        "$powered")
+            toggle_powered
+            ;;
+        "$pairable")
+            toggle_pairable
+            ;;
+    esac
+
+    print_devices
+    echo $divider
+    echo $refresh
+    echo $powered
+    echo $discoverable
+    echo $scanning
+    echo $pairable
+    echo $exit
+
+}
+
 
 function main() {
     # echo $@ test
@@ -182,20 +221,8 @@ function main() {
 
     echo -en "\0prompt\x1fBluetooth\n"
 
-    # echo $state
     if [[ "$state" == "" ]]; then
-        case "$SEL" in
-            "$exit")
-                exit 0
-                ;;
-            "$scanning")
-                toggle_scan
-                echo $back
-                ;;
-            *)
-                menu_state
-                ;;
-        esac
+        menu_state
     else
         device_state $SEL
     fi
