@@ -1,6 +1,6 @@
 #+title: Readme
 
 * How to install
-=make install=
+~make install~
 * How to use
-=rofi -show b -modi "b:$HOME/.config/rofi-scripts/bluetooth"=
+~rofi -show b -modi "b:$HOME/.config/rofi-scripts/bluetooth"~
