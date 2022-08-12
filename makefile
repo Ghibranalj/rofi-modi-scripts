@@ -11,9 +11,9 @@ SCRIPTS=bluetooth
 .PHONY: all
 
 all:
-	rofi -show blue -modi "blue:${PWD}/bluetooth-modi"
+	rofi -show blue -modi "blue:${PWD}/bluetooth"
 
 install:
 	mkdir -p ${INSTALL_DIR}
-	cp ${SCRIPTS} ${INSTALL_DIR}/bluetooth-modi
+	cp ${SCRIPTS} ${INSTALL_DIR}
 # end
