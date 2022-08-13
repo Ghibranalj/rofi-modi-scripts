@@ -6,12 +6,12 @@
 
 INSTALL_DIR=$(HOME)/.config/rofi-scripts
 
-SCRIPTS=bluetooth
+SCRIPTS=bluetooth pulseaudio
 
-.PHONY: all
+.PHONY: ${SCRIPTS}
 
-all:
-	rofi -show blue -modi "blue:${PWD}/bluetooth"
+${SCRIPTS}:
+	rofi -show $@ -modi "$@:${PWD}/$@"
 
 install:
 	mkdir -p ${INSTALL_DIR}

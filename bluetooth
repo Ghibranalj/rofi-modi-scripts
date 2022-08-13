@@ -220,8 +220,9 @@ function main() {
     RET=$ROFI_RETV
 
     # ROFI_INFO stores the information about the state of the app
+    # see rofi-script(5)
     # {ROFI_INFO} = {state};{action};{other_info}
-    # echinfo is used to store the action/ state when the user selects an option
+    # echoinfo is used to store the action/ state when the user selects an option
     # echoinfo {option_content} {ROFI_INFO}
 
     state=$(echo $ROFI_INFO | cut -d ';' -f1)

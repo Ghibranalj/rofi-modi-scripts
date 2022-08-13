@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+#
+
+# echo "Default source"
+# ponymix defaults | sed -n 2p
+# echo "Default sink"
+# ponymix defaults | sed -n 5p
+
+# echo "Sinks"
+# ponymix -t source list | grep -vi 'source\|Avg'
+
+# echo "Sources"
+# ponymix -t source list | grep -vi 'source\|Avg'
+
+function default_sink() {
+    ponymix defaults | sed -n 2p
+}
+
+function default_source() {
+    ponymix defaults | sed -n 5p
+}
+
+function get_sources() {
+    ponymix list-short | grep source | grep -iv "monitor" | tr -s '\t' | cut -d$'\t' -f4- |
+        awk '{printf("    %s\n", $0)}' | grep '\S'
+}
+
+function get_sinks() {
+    ponymix list-short | grep sink | tr -s '\t' | cut -d$'\t' -f4- |
+        awk '{printf("    %s\n", $0)}' | grep '\S'
+}
+
+function get_id(){
+    ponymix list-short | grep $1 | tr -s '\t' | cut -d$'\t' -f1
+}
+
+function echoinfo() {
+    echo -en "$1\0info\x1f$2\n"
+}
+
+function select_line() {
+    echo -en "\0active\x1f$1\n"
+}
+
+function echo_nonselectable() {
+
+    echo -en "$1\0nonselectable\x1ftrue\n"
+}
+
+function main_menu() {
+    echo -en "\0prompt\x1fAudio devices\n"
+    echoinfo "Sinks (Speakers/Headphones) >" "sinks;;"
+    echoinfo "Sources (Microphones) >" "sources;;"
+}
+
+function sources_menu() {
+
+    echo_nonselectable "Sources: "
+    SOURCES=$(get_sources)
+    LINE=$(echo "$SOURCES" | grep -in "$(default_source)" | cut -d':' -f1)
+    echo "$SOURCES"
+
+    select_line "$LINE"
+    echoinfo "Back" "main"
+}
+
+function sinks_menu() {
+
+    echo_nonselectable "Sinks: "
+    SINKS=$(get_sinks)
+    LINE=$(echo "$SINKS" | grep -in "$(default_sink)" | cut -d':' -f1)
+
+    # default_sink
+    echo "$SINKS"
+
+    select_line "$LINE"
+    echoinfo "Back" "main"
+}
+
+function sink_device(){
+    ID=$(get_id $device)
+    # ponymix -t sink set-default $ID
+    echo $ID
+}
+
+function main() {
+
+    # ROFI_INFO stores the information about the state of the app
+    # see rofi-script(5)
+    # {ROFI_INFO} = {state};{action};{other_info}
+    # echoinfo is used to store the action/ state when the user selects an option
+    # echoinfo {option_content} {ROFI_INFO}
+
+    state=$(echo $ROFI_INFO | cut -d ';' -f1)
+    action=$(echo $ROFI_INFO | cut -d ';' -f2)
+    device=$(echo $ROFI_INFO | cut -d ';' -f3)
+
+    if [[ "$state" == "sources" ]]; then
+        sources_menu
+    elif [[ "$state" == "sinks" ]]; then
+        sinks_menu
+    else
+        main_menu
+    fi
+}
+
+main "$@"
