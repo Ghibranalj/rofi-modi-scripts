@@ -21,17 +21,29 @@ function default_source() {
 }
 
 function get_sources() {
-    ponymix list-short | grep source | grep -iv "monitor" | tr -s '\t' | cut -d$'\t' -f4- |
-        awk '{printf("    %s\n", $0)}' | grep '\S'
+    ponymix list-short | grep source | grep -iv "monitor\|output" | tr -s '\t' | cut -d$'\t' -f4- | grep '\S'
 }
 
 function get_sinks() {
-    ponymix list-short | grep sink | tr -s '\t' | cut -d$'\t' -f4- |
-        awk '{printf("    %s\n", $0)}' | grep '\S'
+    ponymix list-short | grep sink | grep -iv "input" | tr -s '\t' | cut -d$'\t' -f4- | grep '\S'
+}
+function is_default() {
+    ponymix defaults | grep -q "$1"
+    if [ $? -eq 0 ]; then
+        echo "true"
+        return 0
+    else
+        echo "false"
+        return 1
+    fi
 }
 
-function get_id(){
-    ponymix list-short | grep $1 | tr -s '\t' | cut -d$'\t' -f1
+function get_id() {
+    ponymix list-short | grep "$2" | grep "$1" | awk '{print $2}'
+}
+
+function get_volume() {
+    pactl "get-$2-volume" "$1" | head -1 | cut -d "/" -f2 | xargs
 }
 
 function echoinfo() {
@@ -43,8 +55,11 @@ function select_line() {
 }
 
 function echo_nonselectable() {
-
     echo -en "$1\0nonselectable\x1ftrue\n"
+}
+
+function set_status() {
+    echo -en "\0message\x1f$1\n"
 }
 
 function main_menu() {
@@ -54,33 +69,66 @@ function main_menu() {
 }
 
 function sources_menu() {
-
+    echo -en "\0prompt\x1fSource menu\n"
     echo_nonselectable "Sources: "
-    SOURCES=$(get_sources)
-    LINE=$(echo "$SOURCES" | grep -in "$(default_source)" | cut -d':' -f1)
-    echo "$SOURCES"
 
+    SOURCES=$(get_sources)
+
+    while read -r line; do
+        echoinfo "    $line" "source_device;;$line"
+        i=$((i + 1))
+        is_default "$line" >/dev/null && select_line "$i"
+    done <<<"$SOURCES"
     select_line "$LINE"
     echoinfo "Back" "main"
 }
 
 function sinks_menu() {
 
-    echo_nonselectable "Sinks: "
-    SINKS=$(get_sinks)
-    LINE=$(echo "$SINKS" | grep -in "$(default_sink)" | cut -d':' -f1)
+    echo -en "\0prompt\x1fSink menu\n"
+    echo_nonselectable "Sinks:"
 
-    # default_sink
-    echo "$SINKS"
+    SINKS=$(get_sinks)
+
+    while read -r line; do
+        echoinfo "    $line" "sink_device;;$line"
+        i=$((i + 1))
+        is_default "$line" >/dev/null && select_line "$i"
+    done <<<"$SINKS"
 
     select_line "$LINE"
     echoinfo "Back" "main"
 }
 
-function sink_device(){
-    ID=$(get_id $device)
-    # ponymix -t sink set-default $ID
-    echo $ID
+function sink_device() {
+    echo -en "\0prompt\x1f$device\n"
+    ID=$(get_id "$device" 'sink')
+    VOLUME=$(get_volume "$ID" 'sink')
+    set_status "Volume: $VOLUME  Default: $(is_default "$device")"
+
+
+    echo_nonselectable "Control:"
+    echoinfo "    Set Default" "sink_device;default;$device"
+    echoinfo "    Mute" "sink_device;mute;$device"
+    echoinfo "    + volume" "sink_device;increase;$device"
+    echoinfo "    - volume" "sink_device;decrease;$device"
+    echoinfo "Back" "sinks"
+}
+
+function source_device(){
+
+    echo -en "\0prompt\x1f$device\n"
+    ID=$(get_id "$device" 'source')
+    VOLUME=$(get_volume "$ID" 'source')
+    set_status "Volume: $VOLUME  Default: $(is_default "$device")"
+
+
+    echo_nonselectable "Control:"
+    echoinfo "    Set Default" "source_device;default;$device"
+    echoinfo "    Mute" "source_device;mute;$device"
+    echoinfo "    + volume" "source_device;increase;$device"
+    echoinfo "    - volume" "source_device;decrease;$device"
+    echoinfo "Back" "sources"
 }
 
 function main() {
@@ -95,10 +143,15 @@ function main() {
     action=$(echo $ROFI_INFO | cut -d ';' -f2)
     device=$(echo $ROFI_INFO | cut -d ';' -f3)
 
+    set_status ""
     if [[ "$state" == "sources" ]]; then
         sources_menu
     elif [[ "$state" == "sinks" ]]; then
         sinks_menu
+    elif [[ "$state" == "sink_device" ]]; then
+        sink_device
+    elif [[ "$state" == "source_device" ]]; then
+        source_device
     else
         main_menu
     fi
