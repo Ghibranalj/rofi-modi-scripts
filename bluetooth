@@ -11,7 +11,6 @@ function echoinfo() {
 }
 function tm() {
     timeout 10 "$@" >/dev/null
-
 }
 function is_discoverable() {
     if bluetoothctl show | grep -iq "Discoverable: yes"; then
@@ -22,7 +21,6 @@ function is_discoverable() {
     echo "Discoverable: OFF"
     return 1
 }
-discoverable=$(is_discoverable)
 
 function is_powered() {
     if bluetoothctl show | grep -iq "Powered: yes"; then
@@ -33,7 +31,6 @@ function is_powered() {
     echo "Powered: OFF"
     return 1
 }
-powered=$(is_powered)
 
 function is_scanning() {
     if bluetoothctl show | grep -iq "Discovering: yes"; then
@@ -44,7 +41,6 @@ function is_scanning() {
     echo "Scanning: OFF"
     return 1
 }
-scanning=$(is_scanning)
 
 function is_pairable() {
     if bluetoothctl show | grep -iq "Pairable: yes"; then
@@ -55,12 +51,11 @@ function is_pairable() {
     echo "Pairable: OFF"
     return 1
 }
-pairable=$(is_pairable)
 
 function print_devices() {
     devices=$(bluetoothctl devices | cut -d ' ' -f3-)
     while read -r line; do
-        echoinfo "$line" "$line"
+        echoinfo "$line" "device;;$line"
     done <<<"$devices"
 }
 
@@ -115,8 +110,8 @@ function toggle_trust() {
 }
 
 function device_state() {
-    device=$(echo $state | cut -d ';' -f1)
-    action=$(echo $state | cut -d ';' -f2)
+    device=$(echo $ROFI_INFO | cut -d ';' -f3)
+    action=$(echo $ROFI_INFO | cut -d ';' -f2)
     mac=$(bluetoothctl devices | grep "$device" | awk '{print $2}')
 
     case $action in
@@ -130,7 +125,6 @@ function device_state() {
             toggle_trust "$mac"
             ;;
     esac
-    # sleep 1
 
     echo -en "\0prompt\x1f$device\n"
 
@@ -138,12 +132,12 @@ function device_state() {
     paired=$(is_paired "$mac")
     trusted=$(is_trusted "$mac")
 
-    echoinfo "$connected" "$device;connect"
-    echoinfo "$paired" "$device;pair"
-    echoinfo "$trusted" "$device;trust"
+    echoinfo "$connected" "device;connect;$device"
+    echoinfo "$paired" "device;pair;$device"
+    echoinfo "$trusted" "device;trust;$device"
 
-    echoinfo $divider $device
-    echoinfo "$refresh" $device
+    echoinfo $divider "device;;$device"
+    echoinfo "$refresh" "device;;$device"
 
     echo $back
     echo $exit
@@ -184,46 +178,59 @@ function toggle_pairable() {
 
 function menu_state() {
 
-    case "$SEL" in
-        "$exit")
+    action=$(echo $ROFI_INFO | cut -d ';' -f2)
+
+    case "$action" in
+        "exit")
             exit 0
             ;;
-        "$scanning")
+        "scan")
             toggle_scan
             ;;
-        "$discoverable")
+        "discover")
             toggle_discoverable
             ;;
-        "$powered")
+        "power")
             toggle_powered
             ;;
 
-        "$pairable")
+        "pair")
             toggle_pairable
             ;;
     esac
 
+    discoverable=$(is_discoverable)
+    powered=$(is_powered)
+    scanning=$(is_scanning)
+    pairable=$(is_pairable)
+
     print_devices
-    echo $divider
-    echo $refresh
-    echo $powered
-    echo $discoverable
-    echo $scanning
-    echo $pairable
-    echo $exit
+    echoinfo "$divider" "menu;divider"
+    echoinfo "$refresh" "menu;refresh"
+    echoinfo "$powered" "menu;power"
+    echoinfo "$discoverable" "menu;discover"
+    echoinfo "$scanning" "menu;scan"
+    echoinfo "$pairable" "menu;pair"
+    echoinfo "$exit" "menu;exit"
 }
 
 function main() {
     # echo $@ test
     SEL="$*"
     RET=$ROFI_RETV
-    state=$ROFI_INFO
+
+    # ROFI_INFO stores the information about the state of the app
+    # {state_info} = {state};{action};{other_info}
+    # echinfo is used to store the action/ state when the user selects an option
+    # echoinfo {content} {state_info}
+
+    state=$(echo $ROFI_INFO | cut -d ';' -f1)
 
     echo -en "\0prompt\x1fBluetooth\n"
 
-    if [[ "$state" == "" ]]; then
+    if [[ "$state" == "" || "$state" == "menu" ]]; then
         menu_state
-    else
+    elif [[ "$state" == "device" ]]; then
         device_state $SEL
     fi
 }
