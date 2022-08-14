@@ -6,29 +6,34 @@ VOLUME_STEP=5
 echoerr() { echo "$@" 1>&2; }
 
 function default_sink() {
-    ponymix defaults | sed -n 2p
+    # ponymix defaults | sed -n 2p
+    local DEF=$(pactl get-default-sink)
+    ponymix list-short | grep -e "^sink\s" | grep "$DEF" | awk -F'\t' '{print $4}'
 }
 
 function default_source() {
-    ponymix defaults | sed -n 5p
+    local DEF=$(pactl get-default-source)
+    ponymix list-short | grep -e "^source\s" | grep "$DEF" | awk -F'\t' '{print $4}'
 }
 
 function get_sources() {
- # ponymix list-short | grep -e '^source\s ' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
-
- # ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
- ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
-
+    ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
 }
 
 function get_sinks() {
- ponymix list-short | grep -e '^sink\s' | awk -F'\t' '{print $4}'
+    ponymix list-short | grep -e '^sink\s' | awk -F'\t' '{print $4}'
+}
+
+function get_playback() {
+    ponymix list-short | grep -e '^sink-input\s' | awk -F'\t' '{print $4}'
 }
 
 # TODO This is not specific enough to be useful.
 function is_default() {
-    ponymix defaults | grep -q "$1"
-    if [ $? -eq 0 ]; then
+
+    DEF=$(default_$2)
+    # echo $DEF $1
+    if [[ "*$DEF*" == "*$1*" ]]; then
         echo "Default: yes"
         return 0
     else
@@ -91,9 +96,11 @@ function set_status() {
 
 function main_menu() {
     echo -en "\0prompt\x1fAudio devices\n"
+
     echoinfo "Sinks (Speakers/Headphones) >" "sinks;;"
     echoinfo "Sources (Microphones) >" "sources;;"
 }
+
 
 function sources_menu() {
     echo -en "\0prompt\x1fSource menu\n"
@@ -104,7 +111,7 @@ function sources_menu() {
     while read -r line; do
         echoinfo "    $line" "source_device;;$line"
         i=$((i + 1))
-        is_default "$line" >/dev/null && select_line "$i"
+        is_default "$line" 'source' >>/dev/null && select_line "$i"
     done <<<"$SOURCES"
 
     echoinfo "Back" "main"
@@ -121,7 +128,7 @@ function sinks_menu() {
         echoinfo "    $line" "sink_device;;$line"
 
         i=$((i + 1))
-        is_default "$line" >/dev/null && select_line "$i" <<<"$SINKS"
+        is_default "$line" 'sink' > /dev/null && select_line "$i" <<<"$SINKS"
     done <<<"$SINKS"
     echoinfo "Back" "main"
 
