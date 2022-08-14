@@ -16,6 +16,12 @@ function echoinfo() {
 function tm() {
     timeout 10 "$@" >/dev/null
 }
+
+
+function select_line() {
+    echo -en "\0active\x1f$1\n"
+}
+
 function is_discoverable() {
     if bluetoothctl show | grep -iq "Discoverable: yes"; then
         echo "Discoverable: ON"
@@ -59,7 +65,14 @@ function is_pairable() {
 function print_devices() {
     devices=$(bluetoothctl devices | cut -d ' ' -f3-)
     while read -r line; do
+        d_mac=$(bluetoothctl devices | grep "$line" | awk '{print $2}')
         echoinfo "    $line" "device;;$line"
+
+
+        i=$((i+1))
+        if is_connected "$d_mac" > /dev/null; then
+           select_line $i
+        fi
     done <<<"$devices"
 }
 
