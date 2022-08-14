@@ -54,8 +54,9 @@ function is_default() {
     fi
 }
 
+# get name of device form id
 function get_name() {
-    ponymix list-short | grep -i "$1" | grep -e "^$2\s" | grep -iv "monitor" |
+    ponymix list-short | grep -i "\s$1\s" | grep -e "^$2\s" | grep -iv "monitor" |
         awk -F '\t' '{print $3}'
 }
 
@@ -160,13 +161,12 @@ function recording_app() {
     SOURCE=$(get_sources)
     echo_nonselectable "Sources: "
     while read -r line; do
-        echoinfo "    $line" "recording_app;move;$device;$line"
-
-        i=$((i+1))
         S_ID=$(get_id "$line" 'source')
+        i=$((i+1))
         if [[ "$CURR_SRC_ID" == "$S_ID" ]]; then
             select_line $i
         fi
+        echoinfo "    $line" "recording_app;move;$device;$S_ID"
 
     done <<<"$SOURCE"
     echoinfo "Back" "recording"
@@ -219,13 +219,12 @@ function playback_app() {
     SINKS=$(get_sinks)
     echo_nonselectable "Sinks: "
     while read -r line; do
-        echoinfo "    $line" "playback_app;move;$device;$line"
-        i=$((i + 1))
         S_ID=$(get_id "$line" 'sink')
-
+        i=$((i + 1))
         if [[ "$CURR_SINK_ID" == "$S_ID" ]]; then
             select_line $i
         fi
+        echoinfo "    $line" "playback_app;move;$device;$S_ID"
     done <<<"$SINKS"
 
     echoinfo "Back" "playback"
@@ -348,6 +347,7 @@ function main() {
     state=$(echo $ROFI_INFO | cut -d ';' -f1)
     action=$(echo $ROFI_INFO | cut -d ';' -f2)
     device=$(echo $ROFI_INFO | cut -d ';' -f3)
+    # id of target
     target=$(echo $ROFI_INFO | cut -d ';' -f4)
 
     set_status ""
