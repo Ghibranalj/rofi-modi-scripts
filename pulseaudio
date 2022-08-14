@@ -1,16 +1,9 @@
 #!/usr/bin/env bash
 #
 
-# echo "Default source"
-# ponymix defaults | sed -n 2p
-# echo "Default sink"
-# ponymix defaults | sed -n 5p
+VOLUME_STEP=5
 
-# echo "Sinks"
-# ponymix -t source list | grep -vi 'source\|Avg'
-
-# echo "Sources"
-# ponymix -t source list | grep -vi 'source\|Avg'
+echoerr() { echo "$@" 1>&2; }
 
 function default_sink() {
     ponymix defaults | sed -n 2p
@@ -21,21 +14,47 @@ function default_source() {
 }
 
 function get_sources() {
-    ponymix list-short | grep source | grep -iv "monitor\|output" | tr -s '\t' | cut -d$'\t' -f4- | grep '\S'
+ # ponymix list-short | grep -e '^source\s ' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
+
+ # ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
+ ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
+
 }
 
 function get_sinks() {
-    ponymix list-short | grep sink | grep -iv "input" | tr -s '\t' | cut -d$'\t' -f4- | grep '\S'
+ ponymix list-short | grep -e '^sink\s' | awk -F'\t' '{print $4}'
 }
+
+# TODO This is not specific enough to be useful.
 function is_default() {
     ponymix defaults | grep -q "$1"
     if [ $? -eq 0 ]; then
-        echo "true"
+        echo "Default: yes"
         return 0
     else
-        echo "false"
+        echo "Default: no"
         return 1
     fi
+}
+
+function get_name() {
+    ponymix list-short | grep -i "$1" | grep -e "^$2\s" | grep -iv "monitor" |
+        awk -F '\t' '{print $3}'
+}
+
+function set_default() {
+    NAME=$(get_name "$1" "$2")
+    # echo $NAME
+    pactl "set-default-$2" "$NAME"
+}
+
+function toggle_mute() {
+    pactl "set-$2-mute" "$1" toggle
+}
+
+function get_muted() {
+    pactl "get-$2-mute" "$1"
+    # echo test
 }
 
 function get_id() {
@@ -44,6 +63,14 @@ function get_id() {
 
 function get_volume() {
     pactl "get-$2-volume" "$1" | head -1 | cut -d "/" -f2 | xargs
+}
+
+function increase_volume() {
+    pactl "set-$2-volume" "$1" "+$VOLUME_STEP%"
+}
+
+function decrease_volume() {
+    pactl "set-$2-volume" "$1" "-$VOLUME_STEP%"
 }
 
 function echoinfo() {
@@ -79,7 +106,7 @@ function sources_menu() {
         i=$((i + 1))
         is_default "$line" >/dev/null && select_line "$i"
     done <<<"$SOURCES"
-    select_line "$LINE"
+
     echoinfo "Back" "main"
 }
 
@@ -92,20 +119,36 @@ function sinks_menu() {
 
     while read -r line; do
         echoinfo "    $line" "sink_device;;$line"
-        i=$((i + 1))
-        is_default "$line" >/dev/null && select_line "$i"
-    done <<<"$SINKS"
 
-    select_line "$LINE"
+        i=$((i + 1))
+        is_default "$line" >/dev/null && select_line "$i" <<<"$SINKS"
+    done <<<"$SINKS"
     echoinfo "Back" "main"
+
 }
 
 function sink_device() {
     echo -en "\0prompt\x1f$device\n"
     ID=$(get_id "$device" 'sink')
-    VOLUME=$(get_volume "$ID" 'sink')
-    set_status "Volume: $VOLUME  Default: $(is_default "$device")"
 
+    case "$action" in
+        "increase")
+            increase_volume "$ID" "sink"
+            ;;
+        "decrease")
+            decrease_volume "$ID" "sink"
+            ;;
+        "mute")
+            toggle_mute "$ID" "sink"
+            ;;
+        "default")
+            set_default "$ID" "sink"
+            ;;
+    esac
+
+    # echo $ID
+    VOLUME=$(get_volume "$ID" 'sink')
+    set_status "Volume: $VOLUME $(is_default "$device" 'sink')  $(get_muted "$ID" "sink")"
 
     echo_nonselectable "Control:"
     echoinfo "    Set Default" "sink_device;default;$device"
@@ -115,13 +158,28 @@ function sink_device() {
     echoinfo "Back" "sinks"
 }
 
-function source_device(){
+function source_device() {
 
     echo -en "\0prompt\x1f$device\n"
     ID=$(get_id "$device" 'source')
-    VOLUME=$(get_volume "$ID" 'source')
-    set_status "Volume: $VOLUME  Default: $(is_default "$device")"
 
+    case "$action" in
+        "increase")
+            increase_volume "$ID" "source"
+            ;;
+        "decrease")
+            decrease_volume "$ID" "source"
+            ;;
+        "mute")
+            toggle_mute "$ID" "source"
+            ;;
+        "default")
+            set_default "$ID" 'source'
+            ;;
+    esac
+
+    VOLUME=$(get_volume "$ID" 'source')
+    set_status "Volume: $VOLUME $(is_default "$device" 'source')  $(get_muted "$ID" "source")"
 
     echo_nonselectable "Control:"
     echoinfo "    Set Default" "source_device;default;$device"
