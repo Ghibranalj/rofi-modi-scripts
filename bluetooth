@@ -6,6 +6,10 @@ back="Back"
 refresh="Refresh"
 scan="Scanning...."
 
+function echo_nonselectable() {
+    echo -en "$1\0nonselectable\x1ftrue\n"
+}
+
 function echoinfo() {
     echo -en "$1\0info\x1f$2\n"
 }
@@ -55,7 +59,7 @@ function is_pairable() {
 function print_devices() {
     devices=$(bluetoothctl devices | cut -d ' ' -f3-)
     while read -r line; do
-        echoinfo "$line" "device;;$line"
+        echoinfo "    $line" "device;;$line"
     done <<<"$devices"
 }
 
@@ -132,11 +136,12 @@ function device_state() {
     paired=$(is_paired "$mac")
     trusted=$(is_trusted "$mac")
 
-    echoinfo "$connected" "device;connect;$device"
-    echoinfo "$paired" "device;pair;$device"
-    echoinfo "$trusted" "device;trust;$device"
+    echo_nonselectable "Control: "
+    echoinfo "    $connected" "device;connect;$device"
+    echoinfo "    $paired" "device;pair;$device"
+    echoinfo "    $trusted" "device;trust;$device"
 
-    echoinfo $divider "device;;$device"
+    # echoinfo $divider "device;;$device"
     echoinfo "$refresh" "device;;$device"
 
     echo $back
@@ -204,8 +209,9 @@ function menu_state() {
     scanning=$(is_scanning)
     pairable=$(is_pairable)
 
+    echo_nonselectable "Devices: "
     print_devices
-    echoinfo "$divider" "menu;divider"
+    # echoinfo "$divider" "menu;divider"
     echoinfo "$refresh" "menu;refresh"
     echoinfo "$powered" "menu;power"
     echoinfo "$discoverable" "menu;discover"
