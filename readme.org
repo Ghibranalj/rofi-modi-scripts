@@ -1,9 +1,22 @@
 #+title: Readme
 
-* How to install
+** How to install
 ~make install~
-* How to use
+** Depedencies
+1. ponymix
+2. dunst
+3. fd
+4. gdbmtool
+5. gdbm
+#+begin_src bash
+yay -S ponymix dunst fd gdbmtool gdbm pactl
+#+end_src
+** How to use
 #+begin_src bash
 # bluetooth
 rofi -show b -modi "b:$HOME/.config/rofi-scripts/bluetooth"
+# notification
+rofi -show b -modi "b:$HOME/.config/rofi-scripts/notification"
+# notification
+rofi -show b -modi "b:$HOME/.config/rofi-scripts/pulseaudio"
 #+end_src
