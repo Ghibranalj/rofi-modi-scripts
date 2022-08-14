@@ -25,10 +25,17 @@ function get_sinks() {
 }
 
 function get_playback() {
-    ponymix list-short | grep -e '^sink-input\s' | awk -F'\t' '{print $4}'
+    ponymix list-short | grep -e '^sink-input\s' | awk -F'\t' '{print $4}' | grep "\S"
 }
 
-# TODO This is not specific enough to be useful.
+function get_recording() {
+    ponymix list-short | grep -e '^source-output\s' | awk -F'\t' '{print $4}' | grep "\S"
+}
+
+function move() {
+    pactl "move-$3" "$1" "$2"
+}
+
 function is_default() {
 
     DEF=$(default_$2)
@@ -60,6 +67,15 @@ function toggle_mute() {
 function get_muted() {
     pactl "get-$2-mute" "$1"
     # echo test
+}
+
+function get_muted_stream(){
+
+    if ponymix is-muted "--$2" -d "$1"; then
+        echo "Muted: yes"
+    else
+        echo "Muted: no"
+    fi
 }
 
 function get_id() {
@@ -99,8 +115,107 @@ function main_menu() {
 
     echoinfo "Sinks (Speakers/Headphones) >" "sinks;;"
     echoinfo "Sources (Microphones) >" "sources;;"
+    echoinfo "Playback Streams" "playback;;"
+    echoinfo "Recording Streams" "recording;;"
 }
 
+function recording_app() {
+    ID=$(get_id "$device" "source-output")
+
+    case "$action" in
+        "move")
+            move "$ID" "$(get_name "$target" 'source')" 'source-output'
+            ;;
+        "mute")
+            toggle_mute "$ID" "source-output"
+            ;;
+        "increase")
+            increase_volume "$ID" "source-output"
+            ;;
+        "decrease")
+            decrease_volume "$ID" "source-output"
+            ;;
+    esac
+
+    echo -en "\0prompt\x1f$device\n"
+
+    MUTED=$(get_muted_stream "$ID" "source-output")
+    VOLUME=$(ponymix get-volume --source-output -d $ID)
+    set_status "Volume: $VOLUME%  $MUTED"
+
+    echo_nonselectable "Control:"
+    echoinfo "    Mute" "recording_app;mute;$device"
+    echoinfo "    + volume" "recording_app;increase;$device"
+    echoinfo "    - volume" "recording_app;decrease;$device"
+
+    SOURCE=$(get_sources)
+    echo_nonselectable "Sources: "
+    while read -r line; do
+        echoinfo "    $line" "recording_app;move;$device;$line"
+    done <<<"$SOURCE"
+    echoinfo "Back" "recording"
+}
+
+function recording_menu() {
+    echo -en "\0prompt\x1fInput Streams\n"
+
+    echo_nonselectable "Input Streams :"
+    PLAY=$(get_recording)
+    while read -r line; do
+        echoinfo "    $line" "recording_app;;$line"
+    done <<<"$PLAY"
+
+    echoinfo "Back" "main"
+}
+
+function playback_app() {
+    ID=$(get_id "$device" "sink-input")
+
+    case "$action" in
+        "move")
+            move "$ID" "$(get_name "$target" 'sink')" 'sink-input'
+            ;;
+        "mute")
+            toggle_mute "$ID" "sink-input"
+            ;;
+        "increase")
+            increase_volume "$ID" "sink-input"
+            ;;
+        "decrease")
+            decrease_volume "$ID" "sink-input"
+            ;;
+    esac
+
+    echo -en "\0prompt\x1f$device\n"
+
+    MUTED=$(get_muted_stream "$ID" "sink-input")
+    VOLUME=$(ponymix get-volume --sink-input -d $ID)
+    set_status "Volume: $VOLUME%  $MUTED"
+
+    echo_nonselectable "Control:"
+    echoinfo "    Mute" "playback_app;mute;$device"
+    echoinfo "    + volume" "playback_app;increase;$device"
+    echoinfo "    - volume" "playback_app;decrease;$device"
+
+    SINKS=$(get_sinks)
+    echo_nonselectable "Sinks: "
+    while read -r line; do
+        echoinfo "    $line" "playback_app;move;$device;$line"
+    done <<<"$SINKS"
+    echoinfo "Back" "playback"
+}
+
+function playback_menu() {
+    echo -en "\0prompt\x1fOutput Streams\n"
+
+    echo_nonselectable "Playback Streams :"
+    PLAY=$(get_recording)
+    while read -r line; do
+        echoinfo "    $line" "playback_app;;$line"
+    done <<<"$PLAY"
+
+    echoinfo "Back" "main"
+}
 
 function sources_menu() {
     echo -en "\0prompt\x1fSource menu\n"
@@ -128,7 +243,7 @@ function sinks_menu() {
         echoinfo "    $line" "sink_device;;$line"
 
         i=$((i + 1))
-        is_default "$line" 'sink' > /dev/null && select_line "$i" <<<"$SINKS"
+        is_default "$line" 'sink' >/dev/null && select_line "$i" <<<"$SINKS"
     done <<<"$SINKS"
     echoinfo "Back" "main"
 
@@ -200,13 +315,14 @@ function main() {
 
     # ROFI_INFO stores the information about the state of the app
     # see rofi-script(5)
-    # {ROFI_INFO} = {state};{action};{other_info}
+    # {ROFI_INFO} = {state};{action};{other_info};{other_info}
     # echoinfo is used to store the action/ state when the user selects an option
     # echoinfo {option_content} {ROFI_INFO}
 
     state=$(echo $ROFI_INFO | cut -d ';' -f1)
     action=$(echo $ROFI_INFO | cut -d ';' -f2)
     device=$(echo $ROFI_INFO | cut -d ';' -f3)
+    target=$(echo $ROFI_INFO | cut -d ';' -f4)
 
     set_status ""
     if [[ "$state" == "sources" ]]; then
@@ -217,6 +333,14 @@ function main() {
         sink_device
     elif [[ "$state" == "source_device" ]]; then
         source_device
+    elif [[ "$state" == "playback" ]]; then
+        playback_menu
+    elif [[ "$state" == "playback_app" ]]; then
+        playback_app
+    elif [[ "$state" == "recording" ]]; then
+        recording_menu
+    elif [[ "$state" == "recording_app" ]]; then
+        recording_app
     else
         main_menu
     fi
