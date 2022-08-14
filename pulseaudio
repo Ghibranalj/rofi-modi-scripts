@@ -85,7 +85,7 @@ function get_muted_stream() {
 }
 
 function get_id() {
-    ponymix list-short | grep "$2" | grep "$1" | grep -iv 'monitor' | awk '{print $2}'
+    ponymix --$2 list-short | grep "$1" | grep -iv 'monitor' | awk '{print $2}'
 }
 
 function get_volume() {
@@ -151,7 +151,7 @@ function recording_app() {
 
     MUTED=$(get_muted_stream "$ID" "source-output")
     VOLUME=$(ponymix get-volume --source-output -d $ID)
-    set_status "Volume: $VOLUME%  $MUTED"
+    # set_status "Volume: $VOLUME%  $MUTED"
 
     echo_nonselectable "Control:"
     echoinfo "    Mute" "recording_app;mute;$device"
@@ -167,9 +167,10 @@ function recording_app() {
             select_line $i
         fi
         echoinfo "    $line" "recording_app;move;$device;$S_ID"
-
+        # echo "recording_app;move;$device;$S_ID"
     done <<<"$SOURCE"
     echoinfo "Back" "recording"
+    echoinfo "Main menu" "main"
 }
 
 function recording_menu() {
@@ -228,6 +229,7 @@ function playback_app() {
     done <<<"$SINKS"
 
     echoinfo "Back" "playback"
+    echoinfo "Main menu" "main"
 }
 
 function playback_menu() {
@@ -293,7 +295,6 @@ function sink_device() {
             ;;
     esac
 
-    # echo $ID
     VOLUME=$(get_volume "$ID" 'sink')
     set_status "Volume: $VOLUME $(is_default "$device" 'sink')  $(get_muted "$ID" "sink")"
 
@@ -303,6 +304,7 @@ function sink_device() {
     echoinfo "    + volume" "sink_device;increase;$device"
     echoinfo "    - volume" "sink_device;decrease;$device"
     echoinfo "Back" "sinks"
+    echoinfo "Main menu" "main"
 }
 
 function source_device() {
@@ -334,6 +336,7 @@ function source_device() {
     echoinfo "    + volume" "source_device;increase;$device"
     echoinfo "    - volume" "source_device;decrease;$device"
     echoinfo "Back" "sources"
+    echoinfo "Main menu" "main"
 }
 
 function main() {
