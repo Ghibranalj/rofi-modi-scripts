@@ -20,16 +20,21 @@ function get_sources() {
     ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
 }
 
+
+function get_stream_device_id(){
+    pactl list short "$2"s | grep -e "^$1" | awk '{print $2}'
+}
+
 function get_sinks() {
     ponymix list-short | grep -e '^sink\s' | awk -F'\t' '{print $4}'
 }
 
 function get_playback() {
-    ponymix list-short | grep -e '^sink-input\s' | awk -F'\t' '{print $4}' | grep "\S"
+    ponymix list-short | grep -e '^sink-input' | awk -F'\t' '{print $4}' | grep "\S"
 }
 
 function get_recording() {
-    ponymix list-short | grep -e '^source-output\s' | awk -F'\t' '{print $4}' | grep "\S"
+    ponymix list-short | grep -e '^source-output' | awk -F'\t' '{print $4}' | grep "\S"
 }
 
 function move() {
@@ -69,7 +74,7 @@ function get_muted() {
     # echo test
 }
 
-function get_muted_stream(){
+function get_muted_stream() {
 
     if ponymix is-muted "--$2" -d "$1"; then
         echo "Muted: yes"
@@ -79,7 +84,7 @@ function get_muted_stream(){
 }
 
 function get_id() {
-    ponymix list-short | grep "$2" | grep "$1" | awk '{print $2}'
+    ponymix list-short | grep "$2" | grep "$1" | grep -iv 'monitor' | awk '{print $2}'
 }
 
 function get_volume() {
@@ -137,7 +142,11 @@ function recording_app() {
             ;;
     esac
 
+
     echo -en "\0prompt\x1f$device\n"
+
+
+    CURR_SRC_ID=$(get_stream_device_id "$ID" "source-output")
 
     MUTED=$(get_muted_stream "$ID" "source-output")
     VOLUME=$(ponymix get-volume --source-output -d $ID)
@@ -147,11 +156,18 @@ function recording_app() {
     echoinfo "    Mute" "recording_app;mute;$device"
     echoinfo "    + volume" "recording_app;increase;$device"
     echoinfo "    - volume" "recording_app;decrease;$device"
-
+    i=4
     SOURCE=$(get_sources)
     echo_nonselectable "Sources: "
     while read -r line; do
         echoinfo "    $line" "recording_app;move;$device;$line"
+
+        i=$((i+1))
+        S_ID=$(get_id "$line" 'source')
+        if [[ "$CURR_SRC_ID" == "$S_ID" ]]; then
+            select_line $i
+        fi
+
     done <<<"$SOURCE"
     echoinfo "Back" "recording"
 }
@@ -188,6 +204,8 @@ function playback_app() {
 
     echo -en "\0prompt\x1f$device\n"
 
+    CURR_SINK_ID=$(get_stream_device_id "$ID" "sink-input")
+
     MUTED=$(get_muted_stream "$ID" "sink-input")
     VOLUME=$(ponymix get-volume --sink-input -d $ID)
     set_status "Volume: $VOLUME%  $MUTED"
@@ -197,11 +215,19 @@ function playback_app() {
     echoinfo "    + volume" "playback_app;increase;$device"
     echoinfo "    - volume" "playback_app;decrease;$device"
 
+    i=4
     SINKS=$(get_sinks)
     echo_nonselectable "Sinks: "
     while read -r line; do
         echoinfo "    $line" "playback_app;move;$device;$line"
+        i=$((i + 1))
+        S_ID=$(get_id "$line" 'sink')
+
+        if [[ "$CURR_SINK_ID" == "$S_ID" ]]; then
+            select_line $i
+        fi
     done <<<"$SINKS"
+
     echoinfo "Back" "playback"
 }
 
@@ -209,7 +235,7 @@ function playback_menu() {
     echo -en "\0prompt\x1fOutput Streams\n"
 
     echo_nonselectable "Playback Streams :"
-    PLAY=$(get_recording)
+    PLAY=$(get_playback)
     while read -r line; do
         echoinfo "    $line" "playback_app;;$line"
     done <<<"$PLAY"
