@@ -6,35 +6,33 @@ VOLUME_STEP=5
 echoerr() { echo "$@" 1>&2; }
 
 function default_sink() {
-    # ponymix defaults | sed -n 2p
     local DEF=$(pactl get-default-sink)
-    ponymix list-short | grep -e "^sink\s" | grep "$DEF" | awk -F'\t' '{print $4}'
+    ponymix list-short | awk -v d="$DEF" -F'\t' '$1 == "sink" && $3 == d { print $4 }'
 }
 
 function default_source() {
     local DEF=$(pactl get-default-source)
-    ponymix list-short | grep -e "^source\s" | grep "$DEF" | awk -F'\t' '{print $4}'
+    ponymix list-short | awk -v d="$DEF" -F'\t' '$1 == "source" && $3 == d {print $4}'
 }
 
 function get_sources() {
-    ponymix list-short | grep -e '^source\s' | grep -iv 'monitor' | awk -F'\t' '{print $4}'
+    ponymix list-short | awk -F'\t' '$1 == "source" && $4 !~ /^[Mm]onitor/  {print $4}'
 }
 
-
 function get_stream_device_id(){
-    pactl list short "$2"s | grep -e "^$1" | awk '{print $2}'
+    pactl list short "$2"s | awk -v t="$1" '$1 == t {print $2}'
 }
 
 function get_sinks() {
-    ponymix list-short | grep -e '^sink\s' | awk -F'\t' '{print $4}'
+    ponymix list-short | awk -F'\t' '$1 == "sink" {print $4}'
 }
 
 function get_playback() {
-    ponymix list-short | grep -e '^sink-input' | awk -F'\t' '{print $4}' | grep "\S"
+    ponymix list-short | awk -F'\t' '$1 == "sink-input" {print $4}'
 }
 
 function get_recording() {
-    ponymix list-short | grep -e '^source-output' | awk -F'\t' '{print $4}' | grep "\S"
+    ponymix list-short | awk -F'\t' '$1 == "source-output" {print $4}'
 }
 
 function move() {
@@ -54,15 +52,13 @@ function is_default() {
     fi
 }
 
-# get name of device form id
+# get name of device from id
 function get_name() {
-    ponymix list-short | grep -i "\s$1\s" | grep -e "^$2\s" | grep -iv "monitor" |
-        awk -F '\t' '{print $3}'
+    ponymix list-short | awk -v id="$1" -v t="$2" -F'\t' '$1 == t && $2 == id {print $3}'
 }
 
 function set_default() {
     NAME=$(get_name "$1" "$2")
-    # echo $NAME
     pactl "set-default-$2" "$NAME"
 }
 
@@ -72,7 +68,6 @@ function toggle_mute() {
 
 function get_muted() {
     pactl "get-$2-mute" "$1"
-    # echo test
 }
 
 function get_muted_stream() {
@@ -85,7 +80,7 @@ function get_muted_stream() {
 }
 
 function get_id() {
-    ponymix --$2 list-short | grep "$1" | grep -iv 'monitor' | awk '{print $2}'
+    ponymix list-short | awk -F'\t' -v q="$1" -v t="$2" '( $3 == q || $4==q ) && $4 !~ /^[Mm]onitor/ && $1 == t {print $2}'
 }
 
 function get_volume() {
@@ -119,8 +114,8 @@ function set_status() {
 function main_menu() {
     echo -en "\0prompt\x1fAudio devices\n"
 
-    echoinfo "Sinks (Speakers/Headphones) >" "sinks;;"
-    echoinfo "Sources (Microphones) >" "sources;;"
+    echoinfo "Sinks (Speakers/Headphones)" "sinks;;"
+    echoinfo "Sources (Microphones)" "sources;;"
     echoinfo "Playback Streams" "playback;;"
     echoinfo "Recording Streams" "recording;;"
 }
