@@ -156,6 +156,9 @@ function recording_app() {
     SOURCE=$(get_sources)
     echo_nonselectable "Sources: "
     while read -r line; do
+        [[ -z "$line" ]] &&\
+            echo_nonselectable "    --" && continue
+
         S_ID=$(get_id "$line" 'source')
         i=$((i+1))
         if [[ "$CURR_SRC_ID" == "$S_ID" ]]; then
@@ -173,7 +176,10 @@ function recording_menu() {
 
     echo_nonselectable "Input Streams :"
     PLAY=$(get_recording)
+
     while read -r line; do
+        [[ -z "$line" ]] &&\
+            echo_nonselectable "    --" && continue
         echoinfo "    $line" "recording_app;;$line"
     done <<<"$PLAY"
 
@@ -233,6 +239,9 @@ function playback_menu() {
     echo_nonselectable "Playback Streams :"
     PLAY=$(get_playback)
     while read -r line; do
+        [[ -z "$line" ]] &&\
+            echo_nonselectable "    --" && continue
+
         echoinfo "    $line" "playback_app;;$line"
     done <<<"$PLAY"
 
@@ -262,8 +271,10 @@ function sinks_menu() {
     SINKS=$(get_sinks)
 
     while read -r line; do
-        echoinfo "    $line" "sink_device;;$line"
+        [[ -z "$line" ]] &&\
+            echo_nonselectable "    --" && continue
 
+        echoinfo "    $line" "sink_device;;$line"
         i=$((i + 1))
         is_default "$line" 'sink' >/dev/null && select_line "$i" <<<"$SINKS"
     done <<<"$SINKS"
