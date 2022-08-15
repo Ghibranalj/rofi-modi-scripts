@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#
 
 VOLUME_STEP=5
 
@@ -84,7 +83,7 @@ function get_id() {
 }
 
 function get_volume() {
-    pactl "get-$2-volume" "$1" | head -1 | cut -d "/" -f2 | xargs
+    pactl "get-$2-volume" "$1" | awk -F'/' '$2{ gsub (/ /,"", $2);printf "%s", $2}'
 }
 
 function increase_volume() {
@@ -276,10 +275,9 @@ function sinks_menu() {
 
         echoinfo "    $line" "sink_device;;$line"
         i=$((i + 1))
-        is_default "$line" 'sink' >/dev/null && select_line "$i" <<<"$SINKS"
+        is_default "$line" 'sink' >/dev/null && select_line "$i"
     done <<<"$SINKS"
     echoinfo "Back" "main"
-
 }
 
 function sink_device() {

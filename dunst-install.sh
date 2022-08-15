@@ -14,9 +14,9 @@ TO=$(grep -n -m 1 "$END_DELIM" $DUNSTRC | cut -d: -f1)
 
 
 if [[ -z $FROM || -z $TO ]]; then
-    echo "no delimiters found"
+    echo "$0: no delimiters found in $DUNSTRC"
 else
-    echo removing lines $FROM-$TO
+    echo "$0: removing lines $FROM-$TO from $DUNSTRC"
     sed -i "${FROM},${TO}d" $DUNSTRC
 fi
 
