@@ -37,24 +37,11 @@ function is_discoverable() {
 function is_powered() {
     bluetoothctl show | awk -F': ' \
         '$1 ~ /^\sPowered$/ {print "Powered:", $2=="yes"? "ON" : "OFF" ; if ($2=="no") exit 1 }'
-    # if bluetoothctl show | grep -iq "Powered: yes"; then
-    #     echo "Powered: ON"
-    #     return 0
-    # fi
-    # echo "Powered: OFF"
-    # return 1
 }
 
 function is_scanning() {
     bluetoothctl show | awk -F': ' \
         '$1 ~ /^\sDiscovering$/ {print "Scanning:", $2=="yes"? "ON" : "OFF" ; if ($2=="no") exit 1 }'
-    # if bluetoothctl show | grep -iq "Discovering: yes"; then
-    #     echo "Scanning: ON"
-    #     return 0
-    # fi
-
-    # echo "Scanning: OFF"
-    # return 1
 }
 
 function is_pairable() {
@@ -143,7 +130,6 @@ function device_state() {
     echoinfo "    $paired" "device;pair;$device"
     echoinfo "    $trusted" "device;trust;$device"
 
-    # echoinfo $divider "device;;$device"
     echoinfo "$refresh" "device;;$device"
 
     echo $back
@@ -211,14 +197,15 @@ function menu_state() {
     scanning=$(is_scanning)
     pairable=$(is_pairable)
 
+    set_status "$powered | $discoverable | $scanning | $pairable"
     echo_nonselectable "Devices: "
     print_devices
-    # echoinfo "$divider" "menu;divider"
-    echoinfo "$refresh" "menu;refresh"
-    echoinfo "$powered" "menu;power"
-    echoinfo "$discoverable" "menu;discover"
-    echoinfo "$scanning" "menu;scan"
-    echoinfo "$pairable" "menu;pair"
+    echo_nonselectable "Control: "
+    echoinfo "    Refresh" "menu;refresh"
+    echoinfo "    Toggle Power" "menu;power"
+    echoinfo "    Toggle Discoverable" "menu;discover"
+    echoinfo "    Toggle Scan" "menu;scan"
+    echoinfo "    Toggle pairable" "menu;pair"
     echoinfo "$exit" "menu;exit"
 }
 
