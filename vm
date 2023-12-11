@@ -18,7 +18,7 @@ _virsh() {
 
 run_virsh() {
     # replace Domain with VM
-    local status=$(_virsh $@ | sed "s/^Domain/Virtual Machine/g")
+    local status=$(_virsh $@ | sed "s/^Domain/Virtual machine/g")
     set_status "$status"
 }
 

@@ -113,10 +113,10 @@ function set_status() {
 function main_menu() {
     echo -en "\0prompt\x1fAudio devices\n"
 
-    echoinfo "Sinks (Speakers/Headphones)" "sinks;;"
-    echoinfo "Sources (Microphones)" "sources;;"
-    echoinfo "Playback Streams" "playback;;"
-    echoinfo "Recording Streams" "recording;;"
+    echoinfo "Output Devices" "sinks;;"
+    echoinfo "Input Devices" "sources;;"
+    echoinfo "Playback" "playback;;"
+    echoinfo "Recording" "recording;;"
 }
 
 function recording_app() {
