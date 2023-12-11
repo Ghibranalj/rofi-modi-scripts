@@ -73,7 +73,7 @@ function print_vm_list(){
             if [[ "$state" != "paused"*  && "$state" != "shut"* ]]; then
                 button "        Pause" "$name;pause;$name"
                 button "        Stop" "$name;stop;$name"
-                i=$((i + 1))
+                i=$((i + 2))
             fi
             if [[ "$state" != "shut"* ]]; then
                 button "        Force Stop" "$name;destroy;$name"
