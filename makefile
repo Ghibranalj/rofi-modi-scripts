@@ -6,7 +6,7 @@
 
 INSTALL_DIR=$(HOME)/.config/rofi-scripts
 
-SCRIPTS=bluetooth pulseaudio
+SCRIPTS=$(shell find . -maxdepth 1 -type f -executable)
 
 .PHONY: ${SCRIPTS}
 
@@ -16,9 +16,6 @@ ${SCRIPTS}:
 install: install-notification
 	mkdir -p ${INSTALL_DIR}
 	cp ${SCRIPTS} ${INSTALL_DIR}
-
-notification:
-	rofi -show $@ -modi "$@:${PWD}/$@"
 
 install-notification:
 	mkdir -p ${INSTALL_DIR}
