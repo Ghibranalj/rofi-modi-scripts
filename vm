@@ -17,7 +17,8 @@ _virsh() {
 }
 
 run_virsh() {
-    local status=$(_virsh $@)
+    # replace Domain with VM
+    local status=$(_virsh $@ | sed "s/^Domain/Virtual Machine/g")
     set_status "$status"
 }
 
@@ -71,9 +72,6 @@ function print_vm_list(){
             fi
             if [[ "$state" != "paused"*  && "$state" != "shut"* ]]; then
                 button "        Pause" "$name;pause;$name"
-                i=$((i + 1))
-            fi
-            if [[ "$state" != "shut"* ]]; then
                 button "        Stop" "$name;stop;$name"
                 i=$((i + 1))
             fi
