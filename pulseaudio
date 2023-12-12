@@ -111,12 +111,12 @@ function set_status() {
 }
 
 function main_menu() {
-    echo -en "\0prompt\x1fAudio devices\n"
+    echo -en "\0prompt\x1fAudio Devices\n"
 
-    echoinfo "Output Devices" "sinks;;"
-    echoinfo "Input Devices" "sources;;"
-    echoinfo "Playback" "playback;;"
-    echoinfo "Recording" "recording;;"
+    echoinfo "🔈   Output Devices" "sinks;;"
+    echoinfo "🎤   Input Devices" "sources;;"
+    echoinfo "🎵   Playback" "playback;;"
+    echoinfo "⏺️   Recording" "recording;;"
 }
 
 function recording_app() {
@@ -218,7 +218,7 @@ function playback_app() {
 
     i=4
     SINKS=$(get_sinks)
-    echo_nonselectable "Sinks: "
+    echo_nonselectable "Input Devices: "
     while read -r line; do
         S_ID=$(get_id "$line" 'sink')
         i=$((i + 1))
@@ -248,8 +248,8 @@ function playback_menu() {
 }
 
 function sources_menu() {
-    echo -en "\0prompt\x1fSource menu\n"
-    echo_nonselectable "Sources: "
+    echo -en "\0prompt\x1fInput Devices \n"
+    echo_nonselectable "Input Devices: "
 
     SOURCES=$(get_sources)
 
@@ -264,8 +264,8 @@ function sources_menu() {
 
 function sinks_menu() {
 
-    echo -en "\0prompt\x1fSink menu\n"
-    echo_nonselectable "Sinks:"
+    echo -en "\0prompt\x1fOutput Devices\n"
+    echo_nonselectable "Output Devices:"
 
     SINKS=$(get_sinks)
 

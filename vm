@@ -46,7 +46,6 @@ function print_vm_list(){
             _virsh list --all |\
                 awk '/^ -/ || /^ [0-9]+/ {sub(/^ -/,"");sub(/^ [0-9]+/, "");sub(/^\s*/,""); print}')
     # loop through all machines
-
     local i=0
     while read -r line; do
         # get machine name
@@ -89,7 +88,7 @@ function print_vm_list(){
 }
 
 function main_menu(){
-    print_vm_list
+    print_vm_list ''
 }
 
 function vm_menu(){
